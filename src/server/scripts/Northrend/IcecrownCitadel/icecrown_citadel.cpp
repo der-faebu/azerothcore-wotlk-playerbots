@@ -27,6 +27,7 @@
 #include "PassiveAI.h"
 #include "ScriptedCreature.h"
 #include "ScriptedEscortAI.h"
+#include "ScriptedGossip.h"
 #include "SmartAI.h"
 #include "SpellAuraEffects.h"
 #include "SpellScriptLoader.h"
@@ -967,7 +968,7 @@ public:
         bool CanAIAttack(Unit const* target) const override
         {
             // do not see targets inside Frostwing Halls when we are not there
-            return target->GetTypeId() != TYPEID_PLAYER && (me->GetPositionY() > 2660.0f) == (target->GetPositionY() > 2660.0f) && target->GetEntry() != NPC_SINDRAGOSA;
+            return !target->IsPlayer() && (me->GetPositionY() > 2660.0f) == (target->GetPositionY() > 2660.0f) && target->GetEntry() != NPC_SINDRAGOSA;
         }
 
     private:
@@ -1211,7 +1212,7 @@ public:
 
     void KilledUnit(Unit* victim) override
     {
-        if (victim->GetTypeId() == TYPEID_PLAYER)
+        if (victim->IsPlayer())
             Talk(SAY_CAPTAIN_KILL);
     }
 
@@ -1237,7 +1238,7 @@ public:
     bool CanAIAttack(Unit const* target) const override
     {
         // do not see targets inside Frostwing Halls when we are not there
-        return (me->GetPositionY() > 2660.0f) == (target->GetPositionY() > 2660.0f) && (target->GetTypeId() == TYPEID_PLAYER || target->IsInCombat());
+        return (me->GetPositionY() > 2660.0f) == (target->GetPositionY() > 2660.0f) && (target->IsPlayer() || target->IsInCombat());
     }
 
     void EnterEvadeMode(EvadeReason why) override
@@ -1683,7 +1684,7 @@ public:
 
             events.Update(diff);
 
-            if (me->HasUnitState(UNIT_STATE_CASTING) || me->isFeared() || me->isFrozen() || me->HasUnitState(UNIT_STATE_STUNNED) || me->HasUnitState(UNIT_STATE_CONFUSED) || ((me->GetEntry() == NPC_YMIRJAR_DEATHBRINGER || me->GetEntry() == NPC_YMIRJAR_FROSTBINDER) && me->HasUnitFlag(UNIT_FLAG_SILENCED)))
+            if (me->HasUnitState(UNIT_STATE_CASTING) || me->HasFearAura() || me->isFrozen() || me->HasUnitState(UNIT_STATE_STUNNED) || me->HasUnitState(UNIT_STATE_CONFUSED) || ((me->GetEntry() == NPC_YMIRJAR_DEATHBRINGER || me->GetEntry() == NPC_YMIRJAR_FROSTBINDER) && me->HasUnitFlag(UNIT_FLAG_SILENCED)))
                 return;
 
             switch (events.ExecuteEvent())
@@ -1757,7 +1758,7 @@ public:
 
         void SpellHitTarget(Unit* c, SpellInfo const* spell) override
         {
-            if (spell->Id == 71306 && c->GetTypeId() == TYPEID_UNIT) // Twisted Winds
+            if (spell->Id == 71306 && c->IsCreature()) // Twisted Winds
             {
                 Position myPos = me->GetPosition();
                 me->NearTeleportTo(c->GetPositionX(), c->GetPositionY(), c->GetPositionZ(), c->GetOrientation());
@@ -2713,7 +2714,7 @@ public:
 
         void MoveInLineOfSight(Unit* who) override
         {
-            if (me->IsAlive() && !me->IsInCombat() && who->GetTypeId() == TYPEID_PLAYER && who->GetExactDist2d(me) < 35.0f)
+            if (me->IsAlive() && !me->IsInCombat() && who->IsPlayer() && who->GetExactDist2d(me) < 35.0f)
                 AttackStart(who);
         }
 
@@ -3023,14 +3024,16 @@ struct npc_icc_spire_frostwyrm : public ScriptedAI
         bool _canResetFlyingEffects;
 };
 
-#define VENGEFUL_WP_COUNT 6
+#define VENGEFUL_WP_COUNT 8
 const Position VengefulWP[VENGEFUL_WP_COUNT] =
 {
     {4432.21f, 3041.5f, 372.783f, 0.0f},
+    {4408.67f, 3041.81f, 372.48f, 0.0f},
     {4370.50f, 3042.00f, 372.80f, 0.0f},
     {4370.37f, 3059.16f, 371.69f, 0.0f},
     {4342.53f, 3058.97f, 371.68f, 0.0f},
     {4342.51f, 3041.24f, 372.80f, 0.0f},
+    {4304.75f, 3041.57f, 372.43f, 0.0f},
     {4281.30f, 3041.77f, 372.78f, 0.0f},
 };
 
@@ -3064,6 +3067,8 @@ public:
             me->SetWalk(false);
             events.Reset();
             events.ScheduleEvent(1, 3s, 6s); // leaping face maul
+            if (currPipeWP != VENGEFUL_WP_COUNT)
+                needMove = true;
         }
 
         void JustReachedHome() override
@@ -3085,7 +3090,7 @@ public:
                 ScriptedAI::MoveInLineOfSight(who);
             else
             {
-                if (!me->IsInCombat() && who->GetTypeId() == TYPEID_PLAYER && me->GetExactDist2dSq(who) < 25.0f * 25.0f && me->CanSeeOrDetect(who) && me->IsValidAttackTarget(who))
+                if (!me->IsInCombat() && who->IsPlayer() && me->GetExactDist2dSq(who) < 25.0f * 25.0f && me->CanSeeOrDetect(who) && me->IsValidAttackTarget(who))
                     AttackStart(who);
             }
         }
@@ -3131,7 +3136,7 @@ public:
                         --currPipeWP;
                 }
                 me->SetHomePosition(VengefulWP[currPipeWP].GetPositionX(), VengefulWP[currPipeWP].GetPositionY(), VengefulWP[currPipeWP].GetPositionZ(), me->GetOrientation());
-                if ((forward && currPipeWP == 3) || (!forward && currPipeWP == 2))
+                if ((forward && currPipeWP == 4) || (!forward && currPipeWP == 3))
                     me->GetMotionMaster()->MoveJump(VengefulWP[currPipeWP].GetPositionX(), VengefulWP[currPipeWP].GetPositionY(), VengefulWP[currPipeWP].GetPositionZ(), 10.0f, 6.0f, 1);
                 else
                     me->GetMotionMaster()->MovePoint(1, VengefulWP[currPipeWP].GetPositionX(), VengefulWP[currPipeWP].GetPositionY(), VengefulWP[currPipeWP].GetPositionZ());
@@ -3230,7 +3235,7 @@ public:
 
         void MoveInLineOfSight(Unit* who) override
         {
-            if (!_didWebBeam && who->GetTypeId() == TYPEID_PLAYER && me->GetExactDist2d(who) < 70.0f)
+            if (!_didWebBeam && who->IsPlayer() && me->GetExactDist2d(who) < 70.0f)
             {
                 _didWebBeam = true;
                 float nx = me->GetPositionX();

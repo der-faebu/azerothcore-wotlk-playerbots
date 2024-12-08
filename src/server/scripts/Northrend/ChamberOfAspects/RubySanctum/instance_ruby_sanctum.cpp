@@ -20,7 +20,6 @@
 #include "InstanceScript.h"
 #include "Player.h"
 #include "SpellScriptLoader.h"
-#include "TemporarySummon.h"
 #include "WorldPacket.h"
 #include "ruby_sanctum.h"
 #include "SpellScript.h"
@@ -276,4 +275,3 @@ void AddSC_instance_ruby_sanctum()
     new instance_ruby_sanctum();
     RegisterSpellScript(spell_ruby_sanctum_rallying_shout);
 }
-

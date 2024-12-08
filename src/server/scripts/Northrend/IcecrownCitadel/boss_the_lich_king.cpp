@@ -32,6 +32,7 @@
 #include "Vehicle.h"
 #include "Weather.h"
 #include "icecrown_citadel.h"
+#include "PassiveAI.h"
 
 enum Texts
 {
@@ -386,7 +387,7 @@ public:
             return false;
         if (!target->IsAlive())
             return false;
-        if (_playerOnly && target->GetTypeId() != TYPEID_PLAYER)
+        if (_playerOnly && !target->IsPlayer())
             return false;
         if (_maxDist && _source->GetExactDist(target) > _maxDist)
             return false;
@@ -412,7 +413,7 @@ public:
             return false;
         if (!target->IsAlive())
             return false;
-        if (_playerOnly && target->GetTypeId() != TYPEID_PLAYER)
+        if (_playerOnly && !target->IsPlayer())
             return false;
         if (target == _source->GetVictim())
             return false;
@@ -446,7 +447,7 @@ public:
             return false;
         if (!target->IsAlive())
             return false;
-        if (target->GetTypeId() != TYPEID_PLAYER)
+        if (!target->IsPlayer())
             return false;
         if (_source->GetExactDist(target) > 100.0f)
             return false;
@@ -600,7 +601,7 @@ public:
 
     bool operator()(Unit* unit) const
     {
-        if (!unit || unit->GetTypeId() != TYPEID_PLAYER || unit == _sourceObj || _sourceObj->GetVictim() == unit || !unit->isTargetableForAttack())
+        if (!unit || !unit->IsPlayer() || unit == _sourceObj || _sourceObj->GetVictim() == unit || !unit->isTargetableForAttack())
             return false;
         if (unit->HasAura(SPELL_PLAGUE_AVOIDANCE) || unit->HasAura(SPELL_BOSS_HITTIN_YA_AURA) || unit->HasAura(_notAura1) || unit->HasAura(_notAura2))
             return false;
@@ -725,7 +726,7 @@ public:
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() == TYPEID_PLAYER && !me->IsInEvadeMode() && _phase != PHASE_OUTRO && _lastTalkTimeKill + 5 < GameTime::GetGameTime().count())
+            if (victim->IsPlayer() && !me->IsInEvadeMode() && _phase != PHASE_OUTRO && _lastTalkTimeKill + 5 < GameTime::GetGameTime().count())
             {
                 _lastTalkTimeKill = GameTime::GetGameTime().count();
                 Talk(SAY_LK_KILL);
@@ -2078,7 +2079,7 @@ class spell_the_lich_king_shadow_trap_periodic : public SpellScript
         GetCaster()->CastSpell((Unit*)nullptr, SPELL_SHADOW_TRAP_KNOCKBACK, true);
         if (Aura* a = GetCaster()->GetAura(SPELL_SHADOW_TRAP_AURA))
             a->SetDuration(0);
-        if (GetCaster()->GetTypeId() == TYPEID_UNIT)
+        if (GetCaster()->IsCreature())
             GetCaster()->ToCreature()->DespawnOrUnsummon(3000);
     }
 
@@ -2102,7 +2103,7 @@ class spell_the_lich_king_ice_burst_target_search : public SpellScript
         if (unitList.empty())
             return;
 
-        if (GetCaster()->GetTypeId() == TYPEID_UNIT)
+        if (GetCaster()->IsCreature())
             GetCaster()->ToCreature()->AI()->DoAction(-1);
     }
 
@@ -2229,7 +2230,7 @@ public:
             me->CastSpell(me, SPELL_RAGING_SPIRIT_VISUAL, true);
             if (TempSummon* summon = me->ToTempSummon())
                 if (Unit* summoner = summon->GetSummonerUnit())
-                    if (summoner->GetTypeId() == TYPEID_PLAYER && summoner->IsAlive() && !summoner->ToPlayer()->IsBeingTeleported() && summoner->FindMap() == me->GetMap())
+                    if (summoner->IsPlayer() && summoner->IsAlive() && !summoner->ToPlayer()->IsBeingTeleported() && summoner->FindMap() == me->GetMap())
                     {
                         valid = true;
                         summoner->CastSpell(me, SPELL_RAGING_SPIRIT_VISUAL_CLONE, true);
@@ -2290,7 +2291,7 @@ public:
                             bool valid = false;
                             if (TempSummon* summon = me->ToTempSummon())
                                 if (Unit* summoner = summon->GetSummonerUnit())
-                                    if (summoner->GetTypeId() == TYPEID_PLAYER && summoner->IsAlive() && !summoner->ToPlayer()->IsBeingTeleported() && summoner->FindMap() == me->GetMap())
+                                    if (summoner->IsPlayer() && summoner->IsAlive() && !summoner->ToPlayer()->IsBeingTeleported() && summoner->FindMap() == me->GetMap())
                                     {
                                         valid = true;
                                         AttackStart(summoner);
@@ -2336,7 +2337,7 @@ class VehicleCheck
 public:
     bool operator()(WorldObject* unit)
     {
-        return (unit->GetTypeId() != TYPEID_UNIT && unit->GetTypeId() != TYPEID_PLAYER) || unit->ToUnit()->GetVehicle();
+        return (!unit->IsCreature() && !unit->IsPlayer()) || unit->ToUnit()->GetVehicle();
     }
 };
 
@@ -2417,6 +2418,8 @@ public:
         ObjectGuid _grabbedPlayer;
         bool didbelow50pct;
         bool dropped;
+        bool grabbed;
+        float _lastSpeed;
         InstanceScript* _instance;
 
         bool IsHeroic() { return me->GetMap()->IsHeroic(); }
@@ -2547,6 +2550,8 @@ public:
             if (me->HasUnitState(UNIT_STATE_CASTING | UNIT_STATE_STUNNED))
                 return;
 
+            HandleSpeedChangeIfNeeded();
+
             switch (_events.ExecuteEvent())
             {
                 case EVENT_GRAB_PLAYER:
@@ -2557,6 +2562,8 @@ public:
                     }
                     break;
                 case EVENT_MOVE_TO_DROP_POS:
+                    grabbed = true;
+                    _lastSpeed = me->GetSpeed(MOVE_WALK);
                     me->AddUnitState(UNIT_STATE_NO_ENVIRONMENT_UPD);
                     me->SetCanFly(false);
                     me->SetDisableGravity(false);
@@ -2595,6 +2602,24 @@ public:
                 default:
                     break;
             }
+        }
+
+        // For some reason, when the Valkyr has a slowdown effect, the speed of PointMovementGenerator
+        // and the speed on the client side differ, which leads to a "teleportation" effect when a stun aura is applied.
+        // Restarting the motion master on speed change ensures the movement is synced between the server and client.
+        void HandleSpeedChangeIfNeeded()
+        {
+            if (!grabbed || dropped)
+                return;
+
+            if (me->GetSpeed(MOVE_WALK) == _lastSpeed)
+                return;
+
+            _lastSpeed = me->GetSpeed(MOVE_WALK);
+            me->GetMotionMaster()->Clear();
+            me->StopMovingOnCurrentPos();
+
+            _events.ScheduleEvent(EVENT_MOVE_TO_DROP_POS, 0);
         }
     };
 
@@ -2804,7 +2829,7 @@ class spell_the_lich_king_vile_spirit_move_target_search : public SpellScript
     bool Load() override
     {
         _target = nullptr;
-        return GetCaster()->GetTypeId() == TYPEID_UNIT;
+        return GetCaster()->IsCreature();
     }
 
     void SelectTarget(std::list<WorldObject*>& targets)
@@ -2957,8 +2982,8 @@ public:
             {
                 if (Unit* summoner = summ->GetSummonerUnit())
                 {
-                    bool buff = _instance->GetBossState(DATA_THE_LICH_KING) == IN_PROGRESS && summoner->GetTypeId() == TYPEID_PLAYER && (!summoner->IsAlive() || summoner->ToPlayer()->IsBeingTeleported() || summoner->FindMap() != me->GetMap());
-                    if (summoner->GetTypeId() == TYPEID_PLAYER && !summoner->ToPlayer()->IsBeingTeleported() && summoner->FindMap() == me->GetMap())
+                    bool buff = _instance->GetBossState(DATA_THE_LICH_KING) == IN_PROGRESS && summoner->IsPlayer() && (!summoner->IsAlive() || summoner->ToPlayer()->IsBeingTeleported() || summoner->FindMap() != me->GetMap());
+                    if (summoner->IsPlayer() && !summoner->ToPlayer()->IsBeingTeleported() && summoner->FindMap() == me->GetMap())
                     {
                         if (buff)
                             summoner->CastSpell((Unit*)nullptr, SPELL_HARVESTED_SOUL_LK_BUFF, true, nullptr, nullptr, _instance->GetGuidData(DATA_THE_LICH_KING));
@@ -2994,7 +3019,7 @@ public:
                     if (TempSummon* summ = me->ToTempSummon())
                         if (Unit* summoner = summ->GetSummonerUnit())
                         {
-                            if (summoner->IsAlive() && summoner->GetTypeId() == TYPEID_PLAYER)
+                            if (summoner->IsAlive() && summoner->IsPlayer())
                             {
                                 summoner->CastSpell((Unit*)nullptr, SPELL_HARVEST_SOUL_VISUAL, true);
                                 summoner->ExitVehicle(summoner);
@@ -3487,7 +3512,7 @@ public:
 
         bool CanAIAttack(Unit const* target) const override
         {
-            return me->GetReactState() == REACT_AGGRESSIVE && target->GetTypeId() == TYPEID_PLAYER && target->GetExactDistSq(495.708f, -2523.76f, 1049.95f) < 40.0f * 40.0f;
+            return me->GetReactState() == REACT_AGGRESSIVE && target->IsPlayer() && target->GetExactDistSq(495.708f, -2523.76f, 1049.95f) < 40.0f * 40.0f;
         }
     };
 

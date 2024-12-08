@@ -22,6 +22,7 @@
 #include "SpellAuraEffects.h"
 #include "SpellScriptLoader.h"
 #include "icecrown_citadel.h"
+#include "PassiveAI.h"
 
 enum Texts
 {
@@ -343,7 +344,7 @@ public:
 
         void DamageDealt(Unit* target, uint32& damage, DamageEffectType  /*damageType*/) override
         {
-            if (target->GetTypeId() != TYPEID_PLAYER)
+            if (!target->IsPlayer())
                 return;
 
             if (damage > RAID_MODE<uint32>(23000, 25000, 23000, 25000))
@@ -352,7 +353,7 @@ public:
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() == TYPEID_PLAYER)
+            if (victim->IsPlayer())
                 Talk(SAY_KELESETH_KILL);
         }
 
@@ -613,7 +614,7 @@ public:
 
         void DamageDealt(Unit* target, uint32& damage, DamageEffectType  /*damageType*/) override
         {
-            if (target->GetTypeId() != TYPEID_PLAYER)
+            if (!target->IsPlayer())
                 return;
 
             if (damage > RAID_MODE<uint32>(23000, 25000, 23000, 25000))
@@ -622,7 +623,7 @@ public:
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() == TYPEID_PLAYER)
+            if (victim->IsPlayer())
                 Talk(SAY_TALDARAM_KILL);
         }
 
@@ -907,7 +908,7 @@ public:
 
         void DamageDealt(Unit* target, uint32& damage, DamageEffectType  /*damageType*/) override
         {
-            if (target->GetTypeId() != TYPEID_PLAYER)
+            if (!target->IsPlayer())
                 return;
 
             if (damage > RAID_MODE<uint32>(23000, 25000, 23000, 25000))
@@ -916,7 +917,7 @@ public:
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() == TYPEID_PLAYER)
+            if (victim->IsPlayer())
                 Talk(SAY_VALANAR_KILL);
         }
 
@@ -1102,7 +1103,7 @@ public:
             if (_introDone)
                 return;
 
-            if (who->GetTypeId() != TYPEID_PLAYER || me->GetExactDist2d(who) > 100.0f)
+            if (!who->IsPlayer() || me->GetExactDist2d(who) > 100.0f)
             {
                 return;
             }
@@ -1335,7 +1336,7 @@ public:
 
         void DamageDealt(Unit* target, uint32& damage, DamageEffectType  /*damageType*/) override
         {
-            if (target->GetTypeId() != TYPEID_PLAYER)
+            if (!target->IsPlayer())
             {
                 return;
             }
@@ -1451,7 +1452,7 @@ class spell_blood_council_shadow_prison_aura : public AuraScript
 
     void HandleDummyTick(AuraEffect const* aurEff)
     {
-        if (GetTarget()->GetTypeId() == TYPEID_PLAYER && GetTarget()->isMoving())
+        if (GetTarget()->IsPlayer() && GetTarget()->isMoving())
         {
             GetTarget()->CastSpell(GetTarget(), SPELL_SHADOW_PRISON_DAMAGE, true, nullptr, aurEff);
         }
@@ -1506,7 +1507,7 @@ class spell_taldaram_summon_flame_ball : public SpellScript
 
     bool Load() override
     {
-        if (GetCaster()->GetTypeId() != TYPEID_UNIT)
+        if (!GetCaster()->IsCreature())
         {
             return false;
         }
@@ -1573,7 +1574,7 @@ class spell_valanar_kinetic_bomb_aura : public AuraScript
     void HandleDummyTick(AuraEffect const* /*aurEff*/)
     {
         Unit* target = GetTarget();
-        if (target->GetTypeId() != TYPEID_UNIT)
+        if (!target->IsCreature())
             return;
 
         if (Creature* bomb = target->FindNearestCreature(NPC_KINETIC_BOMB, 1.0f, true))
@@ -1710,4 +1711,3 @@ void AddSC_boss_blood_prince_council()
     RegisterSpellScript(spell_valanar_kinetic_bomb_summon);
     RegisterSpellScript(spell_blood_council_summon_shadow_resonance);
 }
-

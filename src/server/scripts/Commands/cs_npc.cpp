@@ -337,7 +337,7 @@ public:
             return false;
 
         Unit* unit = handler->getSelectedUnit();
-        if (!unit || unit->GetTypeId() != TYPEID_UNIT)
+        if (!unit || !unit->IsCreature())
         {
             handler->SendErrorMessage(LANG_SELECT_CREATURE);
             return false;
@@ -482,6 +482,9 @@ public:
         Player* player = handler->GetSession()->GetPlayer();
 
         if (!player)
+            return false;
+
+        if (!player->GetSelectedUnit())
             return false;
 
         Creature* creature = player->GetSelectedUnit()->ToCreature();

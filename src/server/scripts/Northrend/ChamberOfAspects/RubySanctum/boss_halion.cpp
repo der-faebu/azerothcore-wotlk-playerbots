@@ -268,7 +268,7 @@ public:
             Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
             for(Map::PlayerList::const_iterator itr = playerList.begin(); itr != playerList.end(); ++itr)
                 if (Player* player = itr->GetSource())
-                    if (!player->IsGameMaster() && player->IsAlive() && me->GetHomePosition().GetExactDist2d(player) < 52.0f && me->IsWithinLOSInMap(player) && !player->HasAuraType(SPELL_AURA_MOD_INVISIBILITY) && !player->HasAuraType(SPELL_AURA_MOD_STEALTH) && !player->HasAuraType(SPELL_AURA_MOD_UNATTACKABLE))
+                    if (!player->IsGameMaster() && player->IsAlive() && me->GetHomePosition().GetExactDist2d(player) < 52.0f && me->IsWithinLOSInMap(player) && !player->HasInvisibilityAura() && !player->HasStealthAura() && !player->HasUnattackableAura())
                         return true;
             return false;
         }
@@ -308,7 +308,7 @@ public:
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() == TYPEID_PLAYER && events.GetNextEventTime(EVENT_KILL_TALK) == 0)
+            if (victim->IsPlayer() && events.GetNextEventTime(EVENT_KILL_TALK) == 0)
             {
                 Talk(SAY_KILL);
                 events.ScheduleEvent(EVENT_KILL_TALK, 6s);
@@ -475,7 +475,7 @@ public:
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() == TYPEID_PLAYER && _events.GetNextEventTime(EVENT_KILL_TALK) == 0)
+            if (victim->IsPlayer() && _events.GetNextEventTime(EVENT_KILL_TALK) == 0)
             {
                 Talk(SAY_KILL);
                 _events.ScheduleEvent(EVENT_KILL_TALK, 6s);
@@ -1053,7 +1053,7 @@ class spell_halion_twilight_phasing : public SpellScript
 
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_UNIT;
+        return GetCaster()->IsCreature();
     }
 
     void Phase()
@@ -1116,7 +1116,7 @@ class spell_halion_twilight_realm_aura : public AuraScript
             return;
 
         target->RemoveAurasDueToSpell(SPELL_FIERY_COMBUSTION, ObjectGuid::Empty, 0, AURA_REMOVE_BY_ENEMY_SPELL);
-        if (GetTarget()->GetTypeId() != TYPEID_PLAYER)
+        if (!GetTarget()->IsPlayer())
             return;
         GetTarget()->m_Events.AddEvent(new SendEncounterUnit(GetTarget()->ToPlayer()), GetTarget()->m_Events.CalculateTime(500));
     }
@@ -1149,7 +1149,7 @@ class spell_halion_leave_twilight_realm_aura : public AuraScript
     {
         GetTarget()->RemoveAurasDueToSpell(SPELL_TWILIGHT_REALM);
 
-        if (GetTarget()->GetTypeId() != TYPEID_PLAYER)
+        if (!GetTarget()->IsPlayer())
             return;
         GetTarget()->m_Events.AddEvent(new SendEncounterUnit(GetTarget()->ToPlayer()), GetTarget()->m_Events.CalculateTime(500));
     }
@@ -1358,4 +1358,3 @@ void AddSC_boss_halion()
     RegisterSpellScript(spell_halion_twilight_division);
     RegisterSpellScript(spell_halion_twilight_mending);
 }
-
