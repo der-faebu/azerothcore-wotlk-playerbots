@@ -386,7 +386,7 @@ void Unit::Update(uint32 p_time)
     // WARNING! Order of execution here is important, do not change.
     // Spells must be processed with event system BEFORE they go to _UpdateSpells.
     // Or else we may have some SPELL_STATE_FINISHED spells stalled in pointers, that is bad.
-    m_Events.Update(p_time);
+    WorldObject::Update(p_time);
 
     if (!IsInWorld())
         return;
@@ -5693,6 +5693,29 @@ uint32 Unit::GetAuraCount(uint32 spellId) const
     }
 
     return count;
+}
+
+bool Unit::HasAuras(SearchMethod sm, std::vector<uint32>& spellIds) const
+{
+    if (sm == SearchMethod::MatchAll)
+    {
+        for (auto const& spellId : spellIds)
+            if (!HasAura(spellId))
+                return false;
+        return true;
+    }
+    else if (sm == SearchMethod::MatchAny)
+    {
+        for (auto const& spellId : spellIds)
+            if (HasAura(spellId))
+                return true;
+        return false;
+    }
+    else
+    {
+        LOG_ERROR("entities.unit", "Unit::HasAuras using non-supported SearchMethod {}", sm);
+        return false;
+    }
 }
 
 bool Unit::HasAura(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint8 reqEffMask) const
@@ -15777,7 +15800,6 @@ void Unit::CleanupBeforeRemoveFromMap(bool finalCleanup)
     if (finalCleanup)
         m_cleanupDone = true;
 
-    m_Events.KillAllEvents(false);                      // non-delatable (currently casted spells) will not deleted now but it will deleted at call in Map::RemoveAllObjectsInRemoveList
     CombatStop();
     ClearComboPoints();
     ClearComboPointHolders();
@@ -21308,7 +21330,7 @@ bool Unit::IsInDisallowedMountForm() const
             return true;
         }
 
-        if (!(shapeshift->flags1 & 0x1))
+        if (!(shapeshift->flags1 & SHAPESHIFT_FLAG_STANCE))
         {
             return true;
         }
