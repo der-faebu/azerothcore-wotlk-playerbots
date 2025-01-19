@@ -1,0 +1,15 @@
+[Unit]
+Description=AzerothCore Authserver
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=azerothcore
+WorkingDirectory=/srv/azerothcore-wotlk-playerbots
+ExecStart=/srv/azerothcore-wotlk-playerbots/acore.sh run-authserver
+
+[Install]
+WantedBy=multi-user.target
