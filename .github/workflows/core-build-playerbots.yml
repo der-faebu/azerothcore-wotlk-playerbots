@@ -49,7 +49,7 @@ jobs:
     - name: Checkout Playerbot Module
       uses: actions/checkout@v3
       with:
-        repository: 'liyunfan1223/mod-playerbots'
+        repository: 'der-faebu/mod-playerbots'
         path: 'modules/mod-playerbots'
     
     - name: Install Requirements
