@@ -22,9 +22,6 @@
 [submodule "modules/mod-solocraft"]
 	path = modules/mod-solocraft
 	url = https://github.com/azerothcore/mod-solocraft.git
-[submodule "modules/DungeonRespawn"]
-	path = modules/DungeonRespawn
-	url = https://github.com/AnchyDev/DungeonRespawn.git
 [submodule "modules/mod-transmog"]
 	path = modules/mod-transmog
 	url = https://github.com/azerothcore/mod-transmog.git
