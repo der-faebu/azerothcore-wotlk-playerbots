@@ -49,8 +49,7 @@ jobs:
     - name: Checkout Playerbot Module
       uses: actions/checkout@v3
       with:
-        repository: 'mod-playerbots/mod-playerbots'
-        #ref: 'feature/core_update_10_2025' #used on core merge conflicts builds
+        repository: 'der-faebu/mod-playerbots'
         path: 'modules/mod-playerbots'
     
     - name: Install Requirements
