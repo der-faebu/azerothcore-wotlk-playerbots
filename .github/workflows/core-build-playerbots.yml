@@ -44,7 +44,7 @@ jobs:
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
         
     # - name: Clone Playerbot Module
-    #   run: git clone --depth=1 --branch=master https://github.com/liyunfan1223/mod-playerbots.git modules/mod-playerbots
+    #   run: git clone --depth=1 --branch=master https://github.com/mod-playerbots/mod-playerbots.git modules/mod-playerbots
 
     - name: Checkout Playerbot Module
       uses: actions/checkout@v3

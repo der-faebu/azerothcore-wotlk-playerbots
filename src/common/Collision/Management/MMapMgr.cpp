@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -23,9 +23,6 @@
 
 namespace MMAP
 {
-    static char const* const MAP_FILE_NAME_FORMAT = "{}/mmaps/{:03}.mmap";
-    static char const* const TILE_FILE_NAME_FORMAT = "{}/mmaps/{:03}{:02}{:02}.mmtile";
-
     // ######################## MMapMgr ########################
     MMapMgr::~MMapMgr()
     {
@@ -141,8 +138,7 @@ namespace MMAP
         uint32 packedGridPos = packTileID(x, y);
         if (mmap->loadedTileRefs.find(packedGridPos) != mmap->loadedTileRefs.end())
         {
-            // Peiru: Commented out for now because Playerbots system uses this method to load or check loaded maps and will spam logs
-//            LOG_ERROR("maps", "MMAP:loadMap: Asked to load already loaded navmesh tile. {:03}{:02}{:02}.mmtile", mapId, x, y);
+            LOG_ERROR("maps", "MMAP:loadMap: Asked to load already loaded navmesh tile. {:03}{:02}{:02}.mmtile", mapId, x, y);
             return false;
         }
 
