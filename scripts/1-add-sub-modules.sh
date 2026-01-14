@@ -15,9 +15,9 @@ GIT_REPOS=(
   https://github.com/azerothcore/mod-random-enchants.git
   https://github.com/ZhengPeiRu21/mod-reagent-bank.git
   https://github.com/azerothcore/mod-solocraft.git
-  https://github.com/AnchyDev/DungeonRespawn.git
   https://github.com/azerothcore/mod-transmog.git
   https://github.com/azerothcore/mod-anticheat.git
+  https://github.com/noisiver/mod-junk-to-gold.git
 )
 
 # Ensure the target directory exists
