@@ -31,9 +31,6 @@
 [submodule "modules/mod-individual-xp"]
 	path = modules/mod-individual-xp
 	url = https://github.com/azerothcore/mod-individual-xp.git
-[submodule "modules/DungeonRespawn"]
-	path = modules/DungeonRespawn
-	url = https://github.com/AnchyDev/DungeonRespawn.git
 [submodule "modules/mod-junk-to-gold"]
 	path = modules/mod-junk-to-gold
 	url = https://github.com/noisiver/mod-junk-to-gold.git
