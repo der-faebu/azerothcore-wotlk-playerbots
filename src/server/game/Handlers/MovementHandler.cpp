@@ -135,8 +135,8 @@ void WorldSession::HandleMoveWorldportAck()
             _player->m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
         }
 
-    if (!_player->getHostileRefMgr().IsEmpty())
-        _player->getHostileRefMgr().deleteReferences(true); // pussywizard: multithreading crashfix
+    if (_player->GetThreatMgr().IsThreateningAnyone())
+        _player->GetThreatMgr().RemoveMeFromThreatLists(); // pussywizard: multithreading crashfix
 
     CellCoord pair(Acore::ComputeCellCoord(GetPlayer()->GetPositionX(), GetPlayer()->GetPositionY()));
     Cell cell(pair);
@@ -152,7 +152,17 @@ void WorldSession::HandleMoveWorldportAck()
     {
         // but landed on another map, cleanup data
         if (!mEntry->IsBattlegroundOrArena())
+        {
+            // release the unconsumed invite, otherwise the BG never satisfies its empty + uninvited deletion gate
+            if (Battleground* bg = _player->GetBattleground(true))
+                if (_player->IsInvitedForBattlegroundInstance(bg->GetInstanceID()))
+                {
+                    bg->DecreaseInvitedCount(_player->GetBgTeamId());
+                    _player->RemoveBattlegroundQueueId(BattlegroundMgr::BGQueueTypeId(bg->GetBgTypeID(), bg->GetArenaType()));
+                }
+
             _player->SetBattlegroundId(0, BATTLEGROUND_TYPE_NONE, PLAYER_MAX_BATTLEGROUND_QUEUES, false, false, TEAM_NEUTRAL);
+        }
         // everything ok
         else if (Battleground* bg = _player->GetBattleground())
         {
